@@ -1,0 +1,204 @@
+$(document).ready(function(){
+}); //end of document ready
+
+// INITIALIZING GLOBALS
+var timeOuts = []; // for cleaning all setTimeout
+var fullSequence = [], temporarySequence = [];
+var pickedPosition;
+var humanPicks = []; var round = 0; var currentRound = 0; var stopClicks;
+var correct = 1; 
+var stirctModeValue = false;
+var snd1 = new Audio("https://s3.amazonaws.com/freecodecamp/simonSound1.mp3");
+var snd2 = new Audio("https://s3.amazonaws.com/freecodecamp/simonSound2.mp3");
+var snd3 = new Audio("https://s3.amazonaws.com/freecodecamp/simonSound3.mp3");
+var snd4 = new Audio("https://s3.amazonaws.com/freecodecamp/simonSound4.mp3");
+var mistake = new Audio("http://www.stuffnewspaper.com/sounds/CONFLICT/gunshot.wav");
+
+// EVENT HANDLERS 
+  $("#btn1").click({nr: 1}, pushDecision); 
+  $("#btn2").click({nr: 2}, pushDecision);
+  $("#btn3").click({nr: 3}, pushDecision);
+  $("#btn4").click({nr: 4}, pushDecision);
+  $("#start").click(startGame);
+  $("#strictMode").click(strictMode);
+  $("#check").click(restart);//restart event handler
+  $(".colorButtons").addClass("stop-clicks");
+
+//ON-OFF switch 
+$("#myonoffswitch").change(function() {
+    if(document.getElementById("myonoffswitch").checked === false){//game is off
+    restart();  
+    } 
+});
+
+//Start Game
+function startGame (){
+
+$(".colorButtons").addClass("stop-clicks");  if(document.getElementById("myonoffswitch").checked === true){
+    if (round === 0){
+      generateGame();
+     }
+      round++;
+      computerMove(round); 
+  }else{
+    alert("Game must be turned on to play!");
+  }
+  
+}  
+
+// GENERATING WINNING, FULL 20 STEP SEQUENCE
+function generateGame(){
+  for (var i = 0 ; i < 20 ; i++){
+    pickedPosition = Math.floor((Math.random() * 4) + 1);
+    fullSequence.push(pickedPosition);
+  }
+}
+
+// STRICT MODE
+function strictMode(){
+  if (stirctModeValue === false){
+    stirctModeValue = true;
+    $("#strictMode").text("Strict Mode ON");
+  }else{
+    $("#strictMode").text("Strict Mode Off");
+    stirctModeValue = false; 
+  }
+}
+
+
+// COMPUTER MOVE - playing temporary sequence
+function computerMove(round){
+  if (currentRound < round){  // don't advance if a mistake has been made
+  currentRound = round; var button;
+  temporarySequence.push(fullSequence[currentRound-1]);              
+  }
+    console.log(temporarySequence);
+  
+  for (var i = 1; i <= temporarySequence.length ; i++){
+     button = temporarySequence[i-1];
+    doSetTimeout(button);
+  }
+        function doSetTimeout(button) {
+        //adding game speed
+          if (round < 5){ // normal speed
+            timeOuts.push(setTimeout(function(i){addingSoundAndLights(button);},i*1500));
+                if (i === temporarySequence.length){
+                timeOuts.push(setTimeout(function(i){$(".colorButtons").removeClass("stop-clicks");},i*1500));}
+          } 
+          if (round >= 5 && round < 9){ //turbo 1
+            timeOuts.push(setTimeout(function(i){addingSoundAndLights(button);},i*1000));
+                if (i === temporarySequence.length){
+                timeOuts.push(setTimeout(function(i){$(".colorButtons").removeClass("stop-clicks");},i*1000));} 
+          }
+         if (round >= 9 && round <13){ //turbo 2
+            timeOuts.push(setTimeout(function(i){addingSoundAndLights(button);},i*700));
+                if (i === temporarySequence.length){
+                timeOuts.push(setTimeout(function(i){$(".colorButtons").removeClass("stop-clicks");},i*700));}
+          }
+         if (round >= 13 && round <=20){ //turbo 3
+            timeOuts.push(setTimeout(function(i){addingSoundAndLights(button);},i*650));
+              if (i === temporarySequence.length){
+                timeOuts.push(setTimeout(function(i){$(".colorButtons").removeClass("stop-clicks");},i*650));}
+          }
+      }
+ $("#roundNr").text(round);
+} //end of computer move
+
+//RESTART FUNCTION
+function restart (){
+  humanPicks=[];
+  temporarySequence = [];
+  fullSequence = [];
+  round = 0;
+  $("#roundNr").text("- -");
+  correct = 1;
+  currentRound = -1;
+  for (var i = 0; i < timeOuts.length; i++) {
+    clearTimeout(timeOuts[i]);
+}//clear all Intervals
+//quick reset of the timer array just cleared
+  timeOuts = [];
+  //stopClicks = false;
+  setTimeout(function () {startGame()}, 1000);
+}
+
+//PlAYING HUMAN DECISIONS 
+function pushDecision(position){
+  /*if (stopClicks === true){
+    return
+  }*/
+var nr = position.data.nr;
+humanPicks.push(nr);
+addingSoundAndLights(nr); //make sound and highlight picked position
+  for (var i = 0; i < humanPicks.length ; i++){
+   if (humanPicks[i] === temporarySequence[i]){
+      correct *= 1; //reinforce
+    }else{
+      correct *= 0;
+        if (stirctModeValue === false){
+        $("#roundNr").text("!!!");
+        for (var i = 0; i < timeOuts.length; i++) {
+            clearTimeout(timeOuts[i]);
+        }timeOuts = [];
+        mistake.play();
+        round--;
+        advanceToNextRound();
+          }else{
+            $("#roundNr").text("!!!");
+            mistake.play();
+            setTimeout(function (){restart()}, 3000);
+            return
+        }
+    }
+  } //end of for loop
+  
+//Advancing to next round & checking for winning condition
+        if (correct === 1 && humanPicks.length === temporarySequence.length && humanPicks.length < 20){
+        console.log("Good, you have picked!");
+        advanceToNextRound();
+          }else if(correct === 1 && humanPicks.length === temporarySequence.length && humanPicks.length === 20){
+            alert("You won Human! GG!");
+            setTimeout(function () {restart();},3000);
+          }
+  
+  function advanceToNextRound(){
+  humanPicks = []; //clearing array  
+  setTimeout(function () {startGame();}, 1000);
+  correct = 1;
+  }
+  
+}// end of Human Turn | pushDecision function
+
+//Adding Sound and Light effect
+function addingSoundAndLights (tune) {
+  
+  switch (tune){
+  case 1:
+    snd1.play();
+    $("#btn1").css("background", "#008000")
+    timeOuts.push(setTimeout(function (){$("#btn1").css("background", "#006600");}, 500)); 
+    break;
+  case 2:
+    snd2.play();
+    $("#btn2").css("background", "#ff0000")
+    timeOuts.push(setTimeout(function (){$("#btn2").css("background", "#cc0000");}, 500));   
+    break;
+  case 3:
+    snd3.play();
+    $("#btn3").css("background", "#ffff00")
+    timeOuts.push(setTimeout(function (){$("#btn3").css("background", "#cccc00");}, 500));    
+    break;
+  case 4:
+    $("#btn4").css("background", "#0000ff")
+    timeOuts.push(setTimeout(function (){$("#btn4").css("background", "#0000cc");}, 500)); 
+    snd4.play();
+    break;  
+  }
+}
+
+
+
+
+
+
+
